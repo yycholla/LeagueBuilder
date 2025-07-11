@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type ChampionFile struct {
@@ -223,4 +224,13 @@ func GetChampions() ([]Champion, error) {
 		}
 	}
 	return champions, nil
+}
+
+func FindChampByName(champions []Champion, name string) *Champion {
+	for _, champ := range champions {
+		if strings.EqualFold(champ.Name, name) {
+			return &champ
+		}
+	}
+	return nil // Return nil if no champion found
 }

@@ -2,38 +2,18 @@ package main
 
 import (
 	"fmt"
+	"runtime"
 )
 
-func main() {
-	FetchUpdate()
-	fmt.Println("Update check completed.")
+const selectedChampion = "Ahri"
+const workers = 1000000
+const batchSize = 10000
 
-	champs, err := GetChampions()
+func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	champions, err := GetChampions()
 	if err != nil {
 		fmt.Println("Error fetching champions:", err)
-		return
-	}
-	for _, champ := range champs {
-		fmt.Printf("Champion: %s, Title: %s\n", champ.Name, champ.Title)
-	}
-
-	err = FetchAugments()
-	if err != nil {
-		fmt.Println("Error fetching augments:", err)
-		return
-	}
-	fmt.Println("Augments fetched successfully.")
-	augments, err := GetAugments()
-	if err != nil {
-		fmt.Println("Error fetching augments:", err)
-		return
-	}
-	for _, augment := range augments {
-		fmt.Printf("Augment: %s, Description: %s\n", augment.Name, augment.Desc)
-	}
-
-	if err != nil {
-		fmt.Println("Error fetching items:", err)
 		return
 	}
 	items, err := GetItems()
@@ -41,7 +21,17 @@ func main() {
 		fmt.Println("Error fetching items:", err)
 		return
 	}
-	for _, item := range items {
-		fmt.Printf("Item: %s, Description: %s\n", item.Name, item.Description)
+	fmt.Println(items[1].Name)                                     // Example usage of items
+	selected := SearchChampionsByName(champions, selectedChampion) // Replace "Ahri" with the desired champion name
+	if err != nil {
+		fmt.Println("Error searching for champion:", err)
+		return
 	}
+	if selected != nil {
+		fmt.Println("You selected:", selected.Name, "")
+		fmt.Println()
+		ProcessAllCombinationsBatched(items, 6, workers, batchSize)
+
+	}
+
 }
