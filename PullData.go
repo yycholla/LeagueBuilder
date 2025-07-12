@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -41,7 +40,7 @@ func GetLocalVersion() (string, error) {
 }
 
 func SetLocalVersion(version string) error {
-	return ioutil.WriteFile("data/version.txt", []byte(version), 0644) // Write the version to the file
+	return os.WriteFile("data/version.txt", []byte(version), 0644) // Write the version to the file
 }
 
 func UpdateAvailable() (bool, error) {

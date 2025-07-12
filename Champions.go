@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -226,11 +227,11 @@ func GetChampions() ([]Champion, error) {
 	return champions, nil
 }
 
-func FindChampByName(champions []Champion, name string) *Champion {
+func FindChampByName(champions []Champion, name string) (*Champion, error) {
 	for _, champ := range champions {
 		if strings.EqualFold(champ.Name, name) {
-			return &champ
+			return &champ, nil
 		}
 	}
-	return nil // Return nil if no champion found
+	return nil, fmt.Errorf("Champion not found") // Return nil if no champion found
 }

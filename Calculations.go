@@ -234,3 +234,13 @@ func CountAllCombinations(n, k int) {
 func ProcessAllCombinationsBatchedOptimized(items []Item, k int, workerCount, batchSize int) {
 	ProcessAllCombinationsOptimized(items, k, workerCount, batchSize)
 }
+
+func testItems(champ Champion, allItems []Item) (Champion, error) {
+	var workingChamp Champion
+	var adItem, apItem, hasteItem, healthItem, armorItem, mrItem Item // etc...
+	for item, idx := range allItems {
+		if item[idx].Stats
+	}
+
+	return workingChamp, nil
+}
