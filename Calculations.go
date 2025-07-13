@@ -1,246 +1,276 @@
 package main
 
-import (
-	"fmt"
-	"sync"
-	"sync/atomic"
-	"time"
-)
+// import (
+// 	"fmt"
+// 	"math"
+// 	"sync"
+// 	"sync/atomic"
+// 	"time"
+// )
 
-// Optimized batch generator - same as your original but with better buffering
-func combinationsBatch(n, k, batchSize int) <-chan [][]int {
-	ch := make(chan [][]int, 100) // Increased buffer size
+// // Optimized batch generator - same as your original but with better buffering
+// func combinationsBatch(n, k, batchSize int) <-chan [][]int {
+// 	ch := make(chan [][]int, 100) // Increased buffer size
 
-	go func() {
-		defer close(ch)
-		indices := make([]int, k)
-		for i := 0; i < k; i++ {
-			indices[i] = i
-		}
+// 	go func() {
+// 		defer close(ch)
+// 		indices := make([]int, k)
+// 		for i := 0; i < k; i++ {
+// 			indices[i] = i
+// 		}
 
-		batch := make([][]int, 0, batchSize)
+// 		batch := make([][]int, 0, batchSize)
 
-		for {
-			comb := make([]int, k)
-			copy(comb, indices)
-			batch = append(batch, comb)
+// 		for {
+// 			comb := make([]int, k)
+// 			copy(comb, indices)
+// 			batch = append(batch, comb)
 
-			// Send the batch when it's full
-			if len(batch) == batchSize {
-				ch <- batch
-				batch = make([][]int, 0, batchSize)
-			}
+// 			// Send the batch when it's full
+// 			if len(batch) == batchSize {
+// 				ch <- batch
+// 				batch = make([][]int, 0, batchSize)
+// 			}
 
-			// Increment indices
-			i := k - 1
-			for i >= 0 && indices[i] == i+n-k {
-				i--
-			}
-			if i < 0 {
-				break
-			}
-			indices[i]++
-			for j := i + 1; j < k; j++ {
-				indices[j] = indices[j-1] + 1
-			}
-		}
+// 			// Increment indices
+// 			i := k - 1
+// 			for i >= 0 && indices[i] == i+n-k {
+// 				i--
+// 			}
+// 			if i < 0 {
+// 				break
+// 			}
+// 			indices[i]++
+// 			for j := i + 1; j < k; j++ {
+// 				indices[j] = indices[j-1] + 1
+// 			}
+// 		}
 
-		// Send remaining combinations
-		if len(batch) > 0 {
-			ch <- batch
-		}
-	}()
+// 		// Send remaining combinations
+// 		if len(batch) > 0 {
+// 			ch <- batch
+// 		}
+// 	}()
 
-	return ch
-}
+// 	return ch
+// }
 
-// Optimized version that removes bottlenecks
-func ProcessAllCombinationsOptimized(items []Item, k int, workerCount, batchSize int) {
-	n := len(items)
-	if n < k {
-		fmt.Println("Not enough items to make combinations.")
-		return
-	}
+// // Optimized version that removes bottlenecks
+// func ProcessAllCombinationsOptimized(items []Item, k int, workerCount, batchSize int) {
+// 	n := len(items)
+// 	if n < k {
+// 		fmt.Println("Not enough items to make combinations.")
+// 		return
+// 	}
 
-	combCh := combinationsBatch(n, k, batchSize)
-	var wg sync.WaitGroup
-	var count int64
+// 	combCh := combinationsBatch(n, k, batchSize)
+// 	var wg sync.WaitGroup
+// 	var count int64
 
-	startTime := time.Now()
+// 	startTime := time.Now()
 
-	// Start a separate goroutine for progress reporting
-	done := make(chan bool)
-	go func() {
-		ticker := time.NewTicker(1 * time.Second)
-		defer ticker.Stop()
+// 	// Start a separate goroutine for progress reporting
+// 	done := make(chan bool)
+// 	go func() {
+// 		ticker := time.NewTicker(1 * time.Second)
+// 		defer ticker.Stop()
 
-		for {
-			select {
-			case <-ticker.C:
-				currentCount := atomic.LoadInt64(&count)
-				elapsed := time.Since(startTime).Seconds()
-				rate := float64(currentCount) / elapsed
-				fmt.Printf("\rGenerated %d combinations | Rate: %.0f/sec", currentCount, rate)
-			case <-done:
-				return
-			}
-		}
-	}()
+// 		for {
+// 			select {
+// 			case <-ticker.C:
+// 				currentCount := atomic.LoadInt64(&count)
+// 				elapsed := time.Since(startTime).Seconds()
+// 				rate := float64(currentCount) / elapsed
+// 				fmt.Printf("\rGenerated %d combinations | Rate: %.0f/sec", currentCount, rate)
+// 			case <-done:
+// 				return
+// 			}
+// 		}
+// 	}()
 
-	for i := 0; i < workerCount; i++ {
-		wg.Add(1)
-		go func(workerID int) {
-			defer wg.Done()
-			for batch := range combCh {
-				for _, indices := range batch {
-					// Do your actual processing here
-					// For now, just counting
-					atomic.AddInt64(&count, 1)
+// 	for i := 0; i < workerCount; i++ {
+// 		wg.Add(1)
+// 		go func(workerID int) {
+// 			defer wg.Done()
+// 			for batch := range combCh {
+// 				for _, indices := range batch {
+// 					// Do your actual processing here
+// 					// For now, just counting
+// 					atomic.AddInt64(&count, 1)
 
-					// Remove the expensive string operations and printing
-					_ = indices
-				}
-			}
-		}(i + 1)
-	}
+// 					// Remove the expensive string operations and printing
+// 					_ = indices
+// 				}
+// 			}
+// 		}(i + 1)
+// 	}
 
-	wg.Wait()
-	close(done)
+// 	wg.Wait()
+// 	close(done)
 
-	// Print final stats
-	totalTime := time.Since(startTime).Seconds()
-	finalRate := float64(count) / totalTime
-	fmt.Printf("\nCompleted %d combinations in %.2f seconds (%.0f/sec)\n",
-		count, totalTime, finalRate)
-}
+// 	// Print final stats
+// 	totalTime := time.Since(startTime).Seconds()
+// 	finalRate := float64(count) / totalTime
+// 	fmt.Printf("\nCompleted %d combinations in %.2f seconds (%.0f/sec)\n",
+// 		count, totalTime, finalRate)
+// }
 
-// If you need to do actual work with the items, here's a more realistic version
-func ProcessAllCombinationsWithWork(items []Item, k int, workerCount, batchSize int) {
-	n := len(items)
-	if n < k {
-		fmt.Println("Not enough items to make combinations.")
-		return
-	}
+// // If you need to do actual work with the items, here's a more realistic version
+// func ProcessAllCombinationsWithWork(items []Item, k int, workerCount, batchSize int) {
+// 	n := len(items)
+// 	if n < k {
+// 		fmt.Println("Not enough items to make combinations.")
+// 		return
+// 	}
 
-	combCh := combinationsBatch(n, k, batchSize)
-	var wg sync.WaitGroup
-	var count int64
+// 	combCh := combinationsBatch(n, k, batchSize)
+// 	var wg sync.WaitGroup
+// 	var count int64
 
-	startTime := time.Now()
+// 	startTime := time.Now()
 
-	// Progress reporting
-	done := make(chan bool)
-	go func() {
-		ticker := time.NewTicker(1 * time.Second)
-		defer ticker.Stop()
+// 	// Progress reporting
+// 	done := make(chan bool)
+// 	go func() {
+// 		ticker := time.NewTicker(1 * time.Second)
+// 		defer ticker.Stop()
 
-		for {
-			select {
-			case <-ticker.C:
-				currentCount := atomic.LoadInt64(&count)
-				elapsed := time.Since(startTime).Seconds()
-				rate := float64(currentCount) / elapsed
-				fmt.Printf("\rGenerated %d combinations | Rate: %.0f/sec", currentCount, rate)
-			case <-done:
-				return
-			}
-		}
-	}()
+// 		for {
+// 			select {
+// 			case <-ticker.C:
+// 				currentCount := atomic.LoadInt64(&count)
+// 				elapsed := time.Since(startTime).Seconds()
+// 				rate := float64(currentCount) / elapsed
+// 				fmt.Printf("\rGenerated %d combinations | Rate: %.0f/sec", currentCount, rate)
+// 			case <-done:
+// 				return
+// 			}
+// 		}
+// 	}()
 
-	for i := 0; i < workerCount; i++ {
-		wg.Add(1)
-		go func(workerID int) {
-			defer wg.Done()
-			for batch := range combCh {
-				for _, indices := range batch {
-					// Do your actual processing here
-					// Example: calculate total gold for this combination
-					var totalGold int
-					for _, idx := range indices {
-						totalGold += items[idx].Gold.Total
-					}
+// 	for i := 0; i < workerCount; i++ {
+// 		wg.Add(1)
+// 		go func(workerID int) {
+// 			defer wg.Done()
+// 			for batch := range combCh {
+// 				for _, indices := range batch {
+// 					// Do your actual processing here
+// 					// Example: calculate total gold for this combination
+// 					var totalGold int
+// 					for _, idx := range indices {
+// 						totalGold += items[idx].Gold.Total
+// 					}
 
-					// You can store results, check conditions, etc.
-					// But avoid expensive operations like string formatting and printing
+// 					// You can store results, check conditions, etc.
+// 					// But avoid expensive operations like string formatting and printing
 
-					atomic.AddInt64(&count, 1)
-				}
-			}
-		}(i + 1)
-	}
+// 					atomic.AddInt64(&count, 1)
+// 				}
+// 			}
+// 		}(i + 1)
+// 	}
 
-	wg.Wait()
-	close(done)
+// 	wg.Wait()
+// 	close(done)
 
-	// Print final stats
-	totalTime := time.Since(startTime).Seconds()
-	finalRate := float64(count) / totalTime
-	fmt.Printf("\nCompleted %d combinations in %.2f seconds (%.0f/sec)\n",
-		count, totalTime, finalRate)
-}
+// 	// Print final stats
+// 	totalTime := time.Since(startTime).Seconds()
+// 	finalRate := float64(count) / totalTime
+// 	fmt.Printf("\nCompleted %d combinations in %.2f seconds (%.0f/sec)\n",
+// 		count, totalTime, finalRate)
+// }
 
-// Ultra-fast version for counting only
-func CountAllCombinations(n, k int) {
-	startTime := time.Now()
+// // Ultra-fast version for counting only
+// func CountAllCombinations(n, k int) {
+// 	startTime := time.Now()
 
-	var count int64
-	batchSize := 10000
+// 	var count int64
+// 	batchSize := 10000
 
-	combCh := combinationsBatch(n, k, batchSize)
-	var wg sync.WaitGroup
+// 	combCh := combinationsBatch(n, k, batchSize)
+// 	var wg sync.WaitGroup
 
-	// Progress reporting
-	done := make(chan bool)
-	go func() {
-		ticker := time.NewTicker(1 * time.Second)
-		defer ticker.Stop()
+// 	// Progress reporting
+// 	done := make(chan bool)
+// 	go func() {
+// 		ticker := time.NewTicker(1 * time.Second)
+// 		defer ticker.Stop()
 
-		for {
-			select {
-			case <-ticker.C:
-				currentCount := atomic.LoadInt64(&count)
-				elapsed := time.Since(startTime).Seconds()
-				rate := float64(currentCount) / elapsed
-				fmt.Printf("\rGenerated %d combinations | Rate: %.0f/sec", currentCount, rate)
-			case <-done:
-				return
-			}
-		}
-	}()
+// 		for {
+// 			select {
+// 			case <-ticker.C:
+// 				currentCount := atomic.LoadInt64(&count)
+// 				elapsed := time.Since(startTime).Seconds()
+// 				rate := float64(currentCount) / elapsed
+// 				fmt.Printf("\rGenerated %d combinations | Rate: %.0f/sec", currentCount, rate)
+// 			case <-done:
+// 				return
+// 			}
+// 		}
+// 	}()
 
-	// Use more workers for pure counting
-	workerCount := 8
-	for i := 0; i < workerCount; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for batch := range combCh {
-				// Just add the batch size to count
-				atomic.AddInt64(&count, int64(len(batch)))
-			}
-		}()
-	}
+// 	// Use more workers for pure counting
+// 	workerCount := 8
+// 	for i := 0; i < workerCount; i++ {
+// 		wg.Add(1)
+// 		go func() {
+// 			defer wg.Done()
+// 			for batch := range combCh {
+// 				// Just add the batch size to count
+// 				atomic.AddInt64(&count, int64(len(batch)))
+// 			}
+// 		}()
+// 	}
 
-	wg.Wait()
-	close(done)
+// 	wg.Wait()
+// 	close(done)
 
-	totalTime := time.Since(startTime).Seconds()
-	finalRate := float64(count) / totalTime
-	fmt.Printf("\nCompleted %d combinations in %.2f seconds (%.0f/sec)\n",
-		count, totalTime, finalRate)
-}
+// 	totalTime := time.Since(startTime).Seconds()
+// 	finalRate := float64(count) / totalTime
+// 	fmt.Printf("\nCompleted %d combinations in %.2f seconds (%.0f/sec)\n",
+// 		count, totalTime, finalRate)
+// }
 
-// Replace your original function with this optimized version
-func ProcessAllCombinationsBatchedOptimized(items []Item, k int, workerCount, batchSize int) {
-	ProcessAllCombinationsOptimized(items, k, workerCount, batchSize)
-}
+// // Replace your original function with this optimized version
+// func ProcessAllCombinationsBatchedOptimized(items []Item, k int, workerCount, batchSize int) {
+// 	ProcessAllCombinationsOptimized(items, k, workerCount, batchSize)
+// }
 
-func testItems(champ Champion, allItems []Item) (Champion, error) {
-	var workingChamp Champion
-	var adItem, apItem, hasteItem, healthItem, armorItem, mrItem Item // etc...
-	for item, idx := range allItems {
-		if item[idx].Stats
-	}
+// func testItems(champ Champion) (map[string]*Item, error) {
+// 	// Create best item map to save items to
+// 	bestItems := make(map[string]*Item)
+// 	// get names of all stats from basic item example
+// 	statNames, err := GetAllStatStrings()
+// 	if err != nil {
+// 		return make(map[string]*Item), err
+// 	}
+// 	// get all items from json
+// 	allItems, err := GetItems()
+// 	if err != nil {
+// 		return make(map[string]*Item), err
+// 	}
 
-	return workingChamp, nil
-}
+// 	// collect stat names
+// 	allStats := make(map[string]bool)
+// 	for _, statName := range statNames {
+// 		allStats[statName] = true
+// 	}
+
+// 	for statName := range allStats {
+// 		var bestItem *Item
+// 		var bestValue float64 = -math.MaxFloat64
+
+// 		for _, item := range allItems {
+// 			if value, exists := item.Stats[statName]; exists && value > bestValue {
+// 				bestValue = value
+// 				bestItem = item
+// 			}
+// 		}
+
+// 		if bestItem != nil {
+// 			bestItems[statName] = bestItem
+// 		}
+// 	}
+
+// 	return bestItems, nil
+// }

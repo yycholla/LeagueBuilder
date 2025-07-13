@@ -33,3 +33,5 @@ go.work.sum
 
 .prettierignore
 data/
+Secrets.json
+config.json
