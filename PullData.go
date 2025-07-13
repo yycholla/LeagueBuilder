@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"sort"
+	"sync"
 
 	"github.com/KnutZuidema/golio"
 	"github.com/KnutZuidema/golio/api"
@@ -14,9 +15,9 @@ import (
 )
 
 type APIClient struct {
-	Client          *golio.Client
-	AllChampions    []datadragon.ChampionData
-	ChampionDetails ChampionDetails
+	Client    *golio.Client
+	allItems  []datadragon.Item
+	itemMutex sync.RWMutex
 }
 
 type Config struct {
@@ -69,55 +70,105 @@ func NewApiClient() (*APIClient, error) {
 	}, nil
 }
 
-func (c *APIClient) GetItemsForMap(mapID string) ([]datadragon.Item, error) {
-	// 1. Fetch the raw item data from the API.
-	itemList, err := c.Client.DataDragon.GetItems()
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch items from API: %w", err)
+func (c *APIClient) getCachedItems() error {
+	// First, try a fast read-only check to see if the cache is already populated.
+	c.itemMutex.RLock()
+	if c.allItems != nil {
+		c.itemMutex.RUnlock()
+		return nil // Cache is hot, nothing to do.
+	}
+	c.itemMutex.RUnlock()
+
+	// If we got here, the cache was empty. Now get a full write lock to populate it.
+	c.itemMutex.Lock()
+	defer c.itemMutex.Unlock() // Ensure the lock is always released
+
+	// It's possible another goroutine populated the cache while we waited for the lock.
+	// We do a "double-check" to prevent redundant API calls.
+	if c.allItems != nil {
+		return nil
 	}
 
-	// 2. Filter and de-duplicate the items.
+	// The cache is definitely empty, so let's make the API call.
+	itemList, err := c.Client.DataDragon.GetItems()
+	if err != nil {
+		return fmt.Errorf("failed to fetch items from API: %w", err)
+	}
+
+	// Sort the slice for consistent ordering.
+	sort.Slice(itemList, func(i, j int) bool {
+		return itemList[i].Name < itemList[j].Name
+	})
+
+	// Store the result in the cache.
+	c.allItems = itemList
+	return nil
+}
+
+// filterAndUniqueItems is a standalone helper function to process a list of items.
+// It filters by map ID and ensures the returned list has unique names.
+func filterAndUniqueItemsChampion(allItems []datadragon.Item, mapID string, championName string) []datadragon.Item {
 	uniqueItemMap := make(map[string]datadragon.Item)
-	for _, item := range itemList {
-		// We only check if the item is available on the specified map.
-		// The `InStore` flag can sometimes be unreliable for certain items.
-		if item.Maps[mapID] {
-			// Add the item to the map to handle duplicates by name.
+
+	for _, item := range allItems {
+		if item.Maps[mapID] && (item.RequiredChampion == "" || item.RequiredChampion == championName) {
 			if _, exists := uniqueItemMap[item.Name]; !exists {
 				uniqueItemMap[item.Name] = item
 			}
 		}
 	}
 
-	// 3. Convert the map back to a slice.
+	// Convert the map back to a slice
 	filteredItems := make([]datadragon.Item, 0, len(uniqueItemMap))
 	for _, item := range uniqueItemMap {
 		filteredItems = append(filteredItems, item)
 	}
 
-	// 4. Sort the final slice by name.
+	// Sort the final slice by name
 	sort.Slice(filteredItems, func(i, j int) bool {
 		return filteredItems[i].Name < filteredItems[j].Name
 	})
 
-	return filteredItems, nil
+	return filteredItems
 }
 
-// --- Public Methods ---
+func filterAndUniqueItems(allItems []datadragon.Item, mapID string) []datadragon.Item {
+	return filterAndUniqueItemsChampion(allItems, mapID, "")
+}
 
-// GetSummonersRiftItems now calls the generic getter with the correct map ID.
+// GetSummonersRiftItems ensures the master list is cached, then returns a filtered list.
 func (c *APIClient) GetSummonersRiftItems() ([]datadragon.Item, error) {
-	return c.GetItemsForMap("11")
+	if err := c.getCachedItems(); err != nil {
+		return nil, err
+	}
+	return filterAndUniqueItems(c.allItems, "11"), nil
 }
 
-// GetARAMItems now calls the generic getter with the correct map ID.
+// GetARAMItems ensures the master list is cached, then returns a filtered list.
 func (c *APIClient) GetARAMItems() ([]datadragon.Item, error) {
-	return c.GetItemsForMap("12")
+	if err := c.getCachedItems(); err != nil {
+		return nil, err
+	}
+	return filterAndUniqueItems(c.allItems, "12"), nil
 }
 
-// GetArenaItems now calls the generic getter with the correct map ID.
+// GetArenaItems ensures the master list is cached, then returns a filtered list.
 func (c *APIClient) GetArenaItems() ([]datadragon.Item, error) {
-	return c.GetItemsForMap("30")
+	if err := c.getCachedItems(); err != nil {
+		return nil, err
+	}
+	return filterAndUniqueItems(c.allItems, "30"), nil
+}
+
+func (c *APIClient) GetBasicItem() ([]datadragon.Item, error) {
+	if err := c.getCachedItems(); err != nil {
+		return nil, err
+	}
+	for _, item := range c.allItems {
+		fmt.Println(item.Name)
+	}
+	return c.allItems, nil
+
 }
 
 type AugmentFile struct {
@@ -218,4 +269,8 @@ func (c *APIClient) GetGameModeData() ([]static.GameMode, error) {
 		return nil, fmt.Errorf("unable to get game modes: %w", err)
 	}
 	return gameModes, nil
+}
+
+func (c *APIClient) GetVersion() string {
+	return c.Client.DataDragon.Version
 }

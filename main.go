@@ -4,6 +4,37 @@ import (
 	"fmt"
 )
 
+const (
+	SPELLBLOCK      = "SpellBlock"
+	BOOTS           = "Boots"
+	MANAREGEN       = "ManaRegen"
+	HEALTHREGEN     = "HealthRegin"
+	MANA            = "Mana"
+	Health          = "Health"
+	Armor           = "Armor"
+	SPELLDAMAGE     = "SpellDamage"
+	LIFESTEAL       = "LifeSteal"
+	SPELLVAMP       = "SpellVamp"
+	JUNGLE          = "Jungle"
+	DAMAGE          = "Damage"
+	LANE            = "Lane"
+	ATTACKSPEED     = "AttackSpeed"
+	ONHIT           = "OnHit"
+	TRINKET         = "Trinket"
+	ACTIVE          = "Active"
+	CONSUMABLE      = "Consumable"
+	CDREDUCTION     = "CooldownReduction"
+	ARMORPEN        = "ArmorPenetration"
+	HASTE           = "AbilityHaste"
+	STEALTH         = "Stealth"
+	VISION          = "Vision"
+	NONBOOTMOVEMENT = "NonbootMovement"
+	TENACITY        = "Tenacity"
+	MAGICPEN        = "MagicPenetration"
+	CRITSTRIKE      = "CriticalStrike"
+	CRITCHANCE      = ""
+)
+
 func main() {
 	c, err := NewApiClient()
 	if err != nil {
@@ -24,8 +55,11 @@ func main() {
 	if err != nil {
 		return
 	}
-	for _, item := range arenaItems {
+	for itemName, item := range FindBestItemPerStat(arenaItems) {
+		fmt.Println(itemName, ": ", item.Name)
+	}
+	for _, item := range FilterItemsByTag(arenaItems, SPELLBLOCK) {
 		fmt.Println(item.Name)
 	}
-	fmt.Println("found ", len(arenaItems), "arena items")
+	fmt.Println(c.GetVersion())
 }
