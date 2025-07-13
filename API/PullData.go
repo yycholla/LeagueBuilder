@@ -1,4 +1,4 @@
-package main
+package API
 
 import (
 	"encoding/json"
@@ -273,4 +273,40 @@ func (c *APIClient) GetGameModeData() ([]static.GameMode, error) {
 
 func (c *APIClient) GetVersion() string {
 	return c.Client.DataDragon.Version
+}
+
+func (c *APIClient) WriteJsonToFile() error {
+	exampleChampion := "Ahri"
+	os.MkdirAll("data", os.FileMode.Perm(0755))
+
+	// try to get items from api
+	itemData, itemErr := c.Client.DataDragon.GetItems()
+	allChampData, allChampErr := c.Client.DataDragon.GetChampions()
+	exampleChampionData, exChampErr := c.Client.DataDragon.GetChampion(exampleChampion)
+	exampleChampionURL := "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champions/" + exampleChampionData.ID + ".json"
+	exChampionData, exErr := http.Get(exampleChampionURL)
+	if itemErr != nil || allChampErr != nil || exChampErr != nil || exErr != nil {
+		return fmt.Errorf("unable to fetch data %w%w%w", itemErr, allChampErr, exChampErr)
+	}
+	fmt.Println("WRITEAPITOFILE: Got data from API")
+
+	// try to marshal data to json
+	itemJson, itemErr := json.MarshalIndent(itemData, "", "   ")
+	allChampJson, allChampErr := json.MarshalIndent(allChampData, "", "   ")
+	exampleChampionJson, exChampErr := json.MarshalIndent(exChampionData, "", "   ")
+	if itemErr != nil || allChampErr != nil || exChampErr != nil {
+		return fmt.Errorf("unable to marshal data %w%w%w", itemErr, allChampErr, exChampErr)
+	}
+	fmt.Println("WRITEAPITOFILE: Wrote data to json")
+
+	// try to write files
+	itemWriteErr := os.WriteFile("data/items.json", itemJson, 0644)
+	allChamWriteErr := os.WriteFile("data/champions.json", allChampJson, 0644)
+	exChampWriteErr := os.WriteFile("data/examplechampion.json", exampleChampionJson, 0644)
+	if itemWriteErr != nil || allChamWriteErr != nil || exChampWriteErr != nil {
+		return fmt.Errorf("unable to write data to file: %w%w%w", itemWriteErr, allChamWriteErr, exChampWriteErr)
+	}
+	fmt.Println("WRITEAPITOFILE: Wrote json to file")
+	return nil
+
 }

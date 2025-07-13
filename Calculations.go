@@ -83,3 +83,62 @@ func FilterItemsByTag(items []datadragon.Item, targetTag string) []datadragon.It
 	}
 	return itemList
 }
+
+// func LevelStats(base, bonus datadragon.ChampionDataStats, level float64) (datadragon.ChampionDataStats, error) {
+// 	// Handle base stats for character
+// 	jsonBytes, err := json.Marshal(base)
+// 	if err != nil {
+// 		return datadragon.ChampionDataStats{}, fmt.Errorf("unable to marshal stat struct: %v", err)
+// 	}
+
+// 	var statMap map[string]float64
+// 	err = json.Unmarshal(jsonBytes, &statMap)
+// 	if err != nil {
+// 		return datadragon.ChampionDataStats{}, fmt.Errorf("unable to unmarshal into map: %v", err)
+// 	}
+
+// 	// temporary bonus implementation
+// 	jsonBytes, err = json.Marshal(bonus)
+// 	if err != nil {
+// 		return datadragon.ChampionDataStats{}, fmt.Errorf("unable to marshal stat struct: %v", err)
+// 	}
+
+// 	var bonusMap map[string]float64
+// 	err = json.Unmarshal(jsonBytes, &bonusMap)
+// 	if err != nil {
+// 		return datadragon.ChampionDataStats{}, fmt.Errorf("unable to unmarshal into map: %v", err)
+// 	}
+
+// 	// temporary growth implementation
+// 	jsonBytes, err = json.Marshal(growth)
+// 	if err != nil {
+// 		return datadragon.ChampionDataStats{}, fmt.Errorf("unable to marshal stat struct: %v", err)
+// 	}
+
+// 	var growthMap map[string]float64
+// 	err = json.Unmarshal(jsonBytes, &growthMap)
+// 	if err != nil {
+// 		return datadragon.ChampionDataStats{}, fmt.Errorf("unable to unmarshal into map: %v", err)
+// 	}
+
+// 	// calculate stats
+// 	for stat, value := range statMap {
+// 		if _, ok := statMap[stat+"PerLevel"]; ok {
+// 			statMap[stat] = value + bonusMap[stat] + statMap[stat+"PerLevel"]*(level-1)*(0.7025+0.0175*(level-1))
+// 		}
+// 	}
+
+// 	// convert final back to struct
+// 	finalStatsBytes, err := json.Marshal(statMap)
+// 	if err != nil {
+// 		return datadragon.ChampionDataStats{}, fmt.Errorf("unable to marshal stat map: %v", err)
+// 	}
+
+// 	var finalStats datadragon.ChampionDataStats
+// 	err = json.Unmarshal(finalStatsBytes, &finalStats)
+// 	if err != nil {
+// 		return datadragon.ChampionDataStats{}, fmt.Errorf("unable to unmarshal stat bytes: %v", err)
+// 	}
+
+// 	return finalStats, nil
+// }

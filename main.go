@@ -1,7 +1,8 @@
 package main
 
 import (
-	"fmt"
+	datadragon "github.com/yycholla/LeagueBuilder/DataDragon"
+	scraper "github.com/yycholla/LeagueBuilder/Scraper"
 )
 
 const (
@@ -32,34 +33,11 @@ const (
 	TENACITY        = "Tenacity"
 	MAGICPEN        = "MagicPenetration"
 	CRITSTRIKE      = "CriticalStrike"
-	CRITCHANCE      = ""
 )
 
 func main() {
-	c, err := NewApiClient()
-	if err != nil {
-		fmt.Println("Error creating client: ", err)
-		return
-	}
-	if err != nil {
-		fmt.Println("Error grabbing arena items: ", err)
-		return
-	}
-
-	// champions, err := c.GetAllChampionData()
-	if err != nil {
-		fmt.Println("Error getting champions: ", err)
-	}
-
-	arenaItems, err := c.GetArenaItems()
-	if err != nil {
-		return
-	}
-	for itemName, item := range FindBestItemPerStat(arenaItems) {
-		fmt.Println(itemName, ": ", item.Name)
-	}
-	for _, item := range FilterItemsByTag(arenaItems, SPELLBLOCK) {
-		fmt.Println(item.Name)
-	}
-	fmt.Println(c.GetVersion())
+	// champion := datadragon.NewChampion("Ahri")
+	// datadragon.CheckChampionFields(champion)
+	file := datadragon.GetChampionsFile()
+	scraper.Scrape(file)
 }
