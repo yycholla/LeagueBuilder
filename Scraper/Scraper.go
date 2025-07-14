@@ -104,7 +104,7 @@ func parseStatValue(statType string, ddSelection *goquery.Selection) (lolbuilder
 }
 
 // Scrape initiates the scraping process for all champions.
-func Scrape(championNames datadragon.ChampionFile) {
+func Scrape(championNames map[string]datadragon.DDragonChampion) {
 	allowedDomains := "leagueoflegends.fandom.com"
 	allChampionsData := make(map[string]lolbuilder.ChampionSupplementalAbilities)
 	re := regexp.MustCompile(`\[edit\]`)
@@ -247,7 +247,7 @@ func Scrape(championNames datadragon.ChampionFile) {
 		mutex.Unlock()
 	})
 
-	for championName := range championNames.Data {
+	for championName := range championNames {
 		originalKey := championName
 		urlName := strings.ReplaceAll(championName, " ", "_")
 

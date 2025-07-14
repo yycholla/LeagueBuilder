@@ -6,6 +6,7 @@ require (
 	github.com/KnutZuidema/golio v1.1.0
 	github.com/PuerkitoBio/goquery v1.10.3
 	github.com/gocolly/colly/v2 v2.2.0
+	github.com/kr/pretty v0.3.1
 )
 
 require (
@@ -18,7 +19,9 @@ require (
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/kennygrant/sanitize v1.2.4 // indirect
+	github.com/kr/text v0.2.0 // indirect
 	github.com/nlnwa/whatwg-url v0.6.2 // indirect
+	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	github.com/saintfish/chardet v0.0.0-20230101081208-5e3ef4b5456d // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/temoto/robotstxt v1.1.2 // indirect

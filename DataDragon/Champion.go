@@ -4,141 +4,153 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 
 	tools "github.com/yycholla/LeagueBuilder/Tools"
+	"github.com/yycholla/LeagueBuilder/lolbuilder" // Import your final character structs
 )
 
-type Champion struct {
-	Version string   `json:"version"`
-	ID      string   `json:"id"`
-	Key     string   `json:"key"`
-	Name    string   `json:"name"`
-	Title   string   `json:"title"`
-	Info    Info     `json:"info"`
-	Tags    []string `json:"tags"`
-	Spells  []Spell
-	Passive Passive
-	Stats   BaseStats `json:"stats"`
+// DDragonChampion represents the structure of a single champion from Riot's JSON.
+// This is used for unmarshalling the champion.json file.
+type DDragonChampion struct {
+	ID      string           `json:"id"`
+	Key     string           `json:"key"`
+	Name    string           `json:"name"`
+	Title   string           `json:"title"`
+	Image   lolbuilder.Image `json:"image"`
+	Lore    string           `json:"lore"`
+	Blurb   string           `json:"blurb"`
+	Tags    []string         `json:"tags"`
+	ParType string           `json:"partype"`
+	Info    lolbuilder.Info  `json:"info"`
+	Stats   lolbuilder.Stats `json:"stats"`
 }
 
-type Info struct {
-	Attack     int `json:"attack"`
-	Defense    int `json:"defense"`
-	Magic      int `json:"magic"`
-	Difficulty int `json:"difficulty"`
-}
-
-type Spell struct {
-	ID          string
-	Name        string
-	Description string
-	Tooltip     string
-	LevelTip    struct {
-		Label  []string
-		Effect []string
-	}
-	MaxRank      int
-	Cooldown     []float64
-	CooldownBurn string
-	Cost         []float64
-	CostBurn     string
-	effect       [][]float64
-}
-
-type Passive struct {
-}
-
-type BaseStats struct {
-	Hp           float64 `json:"hp"`
-	Mp           float64 `json:"mp"`
-	MoveSpeed    float64 `json:"movespeed"`
-	Armor        float64 `json:"armor"`
-	SpellBlock   float64 `json:"spellblock"`
-	AttackRange  float64 `json:"attackrange"`
-	HpRegen      float64 `json:"hpregen"`
-	MpRegen      float64 `json:"mpregen"`
-	Crit         float64 `json:"crit"`
-	AttackDamage float64 `json:"attackdamage"`
-	AttackSpeed  float64 `json:"attackspeed"`
-	// Growth stats are also in this same object
-	HpPerLevel           float64 `json:"hpperlevel"`
-	MpPerLevel           float64 `json:"mpperlevel"`
-	ArmorPerLevel        float64 `json:"armorperlevel"`
-	SpellBlockPerLevel   float64 `json:"spellblockperlevel"`
-	HpRegenPerLevel      float64 `json:"hpregenperlevel"`
-	MpRegenPerLevel      float64 `json:"mpregenperlevel"`
-	CritPerLevel         float64 `json:"critperlevel"`
-	AttackDamagePerLevel float64 `json:"attackdamageperlevel"`
-	AttackSpeedPerLevel  float64 `json:"attackspeedperlevel"`
+// DDragonResponse is the top-level structure of champion.json.
+type DDragonResponse struct {
+	Type    string                     `json:"type"`
+	Format  string                     `json:"format"`
+	Version string                     `json:"version"`
+	Data    map[string]DDragonChampion `json:"data"`
 }
 
 const championFile = "Champion/champion.json"
+const supplementalFile = "Champion/supplemental_abilities.json"
 
-func GetChampionsFile() ChampionFile {
-	champPath := "Champion/champion.json"
+// GetChampionsFile ensures the local champion.json is up-to-date and returns its data.
+// It now returns the map of champions, which is more useful for creating characters.
+func GetChampionsFile() map[string]DDragonChampion {
+	champPath := championFile
+
+	// Ensure the Champion directory exists
+	if _, err := os.Stat("Champion"); os.IsNotExist(err) {
+		os.Mkdir("Champion", 0755)
+	}
+
+	// Check if the champion file exists before trying to read it
 	champBytes, err := os.ReadFile(champPath)
-	tools.SimpleError(err)
+	if os.IsNotExist(err) {
+		fmt.Println("Champion file not found, downloading...")
+		champBytes = nil // Ensure bytes are nil so we trigger the download logic
+	} else if err != nil {
+		tools.SimpleError(err)
+	}
 
 	remoteVersion, err := GetVersion()
 	tools.SimpleError(err)
 
-	var champFile ChampionFile
-	err = json.Unmarshal(champBytes, &champFile)
-	tools.SimpleError(err)
-	fmt.Println("Local Version: ", champFile.Version) // blank version on output
-	if champFile.Version != remoteVersion {
-		fmt.Println("Updating Champion File")
-		url := "https://ddragon.leagueoflegends.com/cdn/" + remoteVersion + "/data/en_US/champion.json"
-		// delete file
-		err := os.Remove("Champion/champion.json")
+	var champFileResponse DDragonResponse
+	// Only try to unmarshal if the file actually exists and has content
+	if champBytes != nil {
+		err = json.Unmarshal(champBytes, &champFileResponse)
 		tools.SimpleError(err)
+	}
 
-		// make request
+	fmt.Println("Local Version: ", champFileResponse.Version)
+	if champFileResponse.Version != remoteVersion {
+		fmt.Println("Updating Champion File to version:", remoteVersion)
+		url := "https://ddragon.leagueoflegends.com/cdn/" + remoteVersion + "/data/en_US/champion.json"
+
+		// If the file exists, remove it to ensure a clean write
+		if _, err := os.Stat(champPath); err == nil {
+			err := os.Remove(champPath)
+			tools.SimpleError(err)
+		}
+
 		resp, err := http.Get(url)
 		tools.SimpleError(err)
 		defer resp.Body.Close()
 
-		// create file
 		file, err := os.Create(champPath)
 		tools.SimpleError(err)
 		defer file.Close()
 
-		_, err = io.Copy(file, resp.Body)
+		// Read the body to a variable so we can unmarshal it after writing
+		body, err := io.ReadAll(resp.Body)
 		tools.SimpleError(err)
+
+		_, err = file.Write(body)
+		tools.SimpleError(err)
+
+		// Unmarshal the new data into our response struct
+		err = json.Unmarshal(body, &champFileResponse)
+		tools.SimpleError(err)
+
 		fmt.Println("Updated File")
 	} else {
 		fmt.Println("Champion file up to date")
 	}
-	return champFile
+	return champFileResponse.Data
 }
 
-// create champion with data present
-func NewChampion(name string) Champion {
-	file, err := os.ReadFile(championFile)
-	tools.SimpleError(err)
-
-	var championFile ChampionFile
-	err = json.Unmarshal(file, &championFile)
-	tools.SimpleError(err)
-
-	champion := championFile.Data[name]
-	return champion
-}
-
-// func GetChampionNames()
-
-// test fields for empty values
-func CheckChampionFields(champion Champion) {
-	champ, err := json.Marshal(champion)
-	tools.SimpleError(err)
-
-	var champMap map[string]any
-	err = json.Unmarshal(champ, &champMap)
-	tools.SimpleError(err)
-
-	for key, value := range champMap {
-		fmt.Println(key, value)
+// NewCharacter creates a complete, merged character object by combining data from
+// Riot's Data Dragon and the supplemental data scraped from the wiki.
+func NewCharacter(name string) (lolbuilder.Character, error) {
+	// 1. Load the base champion data from Data Dragon
+	ddragonChampions := GetChampionsFile()
+	ddragonData, ok := ddragonChampions[name]
+	if !ok {
+		return lolbuilder.Character{}, fmt.Errorf("champion '%s' not found in Data Dragon file", name)
 	}
+
+	// 2. Load the supplemental scraped data
+	scrapedBytes, err := os.ReadFile(supplementalFile)
+	if err != nil {
+		return lolbuilder.Character{}, fmt.Errorf("failed to read supplemental abilities file: %w", err)
+	}
+
+	var allScrapedAbilities map[string]lolbuilder.ChampionSupplementalAbilities
+	err = json.Unmarshal(scrapedBytes, &allScrapedAbilities)
+	if err != nil {
+		return lolbuilder.Character{}, fmt.Errorf("failed to unmarshal supplemental abilities: %w", err)
+	}
+
+	scrapedData, ok := allScrapedAbilities[name]
+	if !ok {
+		// It's possible a champion exists in DDragon but wasn't scraped, so we just log this and continue
+		log.Printf("Warning: No supplemental scraped data found for champion '%s'. Character will have basic info only.", name)
+	}
+
+	// 3. Create the final, merged character struct
+	character := lolbuilder.Character{
+		// Map all the data from Data Dragon
+		ID:      ddragonData.ID,
+		Key:     ddragonData.Key,
+		Name:    ddragonData.Name,
+		Title:   ddragonData.Title,
+		Image:   ddragonData.Image,
+		Lore:    ddragonData.Lore,
+		Blurb:   ddragonData.Blurb,
+		Tags:    ddragonData.Tags,
+		ParType: ddragonData.ParType,
+		Info:    ddragonData.Info,
+		Stats:   ddragonData.Stats,
+
+		// Embed the entire scraped abilities struct
+		ChampionSupplementalAbilities: scrapedData,
+	}
+
+	return character, nil
 }

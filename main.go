@@ -1,8 +1,8 @@
 package main
 
 import (
+	"github.com/kr/pretty"
 	datadragon "github.com/yycholla/LeagueBuilder/DataDragon"
-	scraper "github.com/yycholla/LeagueBuilder/Scraper"
 )
 
 const (
@@ -36,8 +36,10 @@ const (
 )
 
 func main() {
-	// champion := datadragon.NewChampion("Ahri")
-	// datadragon.CheckChampionFields(champion)
-	file := datadragon.GetChampionsFile()
-	scraper.Scrape(file)
+	ahri, err := datadragon.NewCharacter("Ahri")
+	if err != nil {
+		panic(err)
+	}
+	pretty.Print(ahri)
+
 }
