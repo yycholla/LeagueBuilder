@@ -1,5 +1,10 @@
 package lolbuilder
 
+import (
+	"fmt"
+	"strings"
+)
+
 // Character is the final, unified struct combining Data Dragon and scraped data.
 type Character struct {
 	ID      string   `json:"id"`
@@ -35,25 +40,25 @@ type Info struct {
 // Stats holds the base stat information for a champion from Data Dragon.
 type Stats struct {
 	HP                   float64 `json:"hp"`
-	HPPerLevel           float64 `json:"hpperlevel"`
 	MP                   float64 `json:"mp"`
-	MPPerLevel           float64 `json:"mpperlevel"`
 	MoveSpeed            float64 `json:"movespeed"`
 	Armor                float64 `json:"armor"`
-	ArmorPerLevel        float64 `json:"armorperlevel"`
 	SpellBlock           float64 `json:"spellblock"`
-	SpellBlockPerLevel   float64 `json:"spellblockperlevel"`
-	AttackRange          float64 `json:"attackrange"`
 	HPRegen              float64 `json:"hpregen"`
-	HPRegenPerLevel      float64 `json:"hpregenperlevel"`
 	MPRegen              float64 `json:"mpregen"`
-	MPRegenPerLevel      float64 `json:"mpregenperlevel"`
-	Crit                 float64 `json:"crit"`
-	CritPerLevel         float64 `json:"critperlevel"`
+	AttackRange          float64 `json:"attackrange"`
 	AttackDamage         float64 `json:"attackdamage"`
+	AttackSpeed          float64 `json:"attackspeed"`
+	Crit                 float64 `json:"crit"`
+	HPPerLevel           float64 `json:"hpperlevel"`
+	MPPerLevel           float64 `json:"mpperlevel"`
+	ArmorPerLevel        float64 `json:"armorperlevel"`
+	SpellBlockPerLevel   float64 `json:"spellblockperlevel"`
+	CritPerLevel         float64 `json:"critperlevel"`
+	HPRegenPerLevel      float64 `json:"hpregenperlevel"`
+	MPRegenPerLevel      float64 `json:"mpregenperlevel"`
 	AttackDamagePerLevel float64 `json:"attackdamageperlevel"`
 	AttackSpeedPerLevel  float64 `json:"attackspeedperlevel"`
-	AttackSpeed          float64 `json:"attackspeed"`
 }
 
 // --- Your Existing Scraper Structs (unchanged) ---
@@ -93,4 +98,37 @@ type ChampionSupplementalAbilities struct {
 	W       SupplementalSpell   `json:"w"`
 	E       SupplementalSpell   `json:"e"`
 	R       SupplementalSpell   `json:"r"`
+}
+
+// String creates a human-readable summary of the Character.
+// This method satisfies the fmt.Stringer interface.
+func (c *Character) String() string {
+	// Using strings.Builder is highly efficient for building strings.
+	var sb strings.Builder
+
+	// Main Identity
+	sb.WriteString(fmt.Sprintf("%s - %s\n", c.Name, c.Title))
+	sb.WriteString(fmt.Sprintf("\"%s\"\n", c.Blurb))
+	sb.WriteString(fmt.Sprintf("Tags: %s\n", strings.Join(c.Tags, ", ")))
+	sb.WriteString("\n")
+
+	// Base Stats Summary
+	sb.WriteString("--- Base Stats ---\n")
+	sb.WriteString(fmt.Sprintf("  Health:           %.2f (+%.2f per level)\n", c.Stats.HP, c.Stats.HPPerLevel))
+	sb.WriteString(fmt.Sprintf("  %s: %-15.2f (+%.2f per level)\n", c.ParType, c.Stats.MP, c.Stats.MPPerLevel)) // Use ParType for Mana/Energy etc.
+	sb.WriteString(fmt.Sprintf("  Attack Damage:    %.2f (+%.2f per level)\n", c.Stats.AttackDamage, c.Stats.AttackDamagePerLevel))
+	sb.WriteString(fmt.Sprintf("  Armor:            %.2f (+%.2f per level)\n", c.Stats.Armor, c.Stats.ArmorPerLevel))
+	sb.WriteString(fmt.Sprintf("  Magic Resist:     %.2f (+%.2f per level)\n", c.Stats.SpellBlock, c.Stats.SpellBlockPerLevel))
+	sb.WriteString(fmt.Sprintf("  Movement Speed:   %.0f\n", c.Stats.MoveSpeed))
+	sb.WriteString("\n")
+
+	// Abilities
+	sb.WriteString("--- Abilities ---\n")
+	sb.WriteString(fmt.Sprintf("  Passive: %s\n", c.Passive.Name))
+	sb.WriteString(fmt.Sprintf("  Q:       %s\n", c.Q.Name))
+	sb.WriteString(fmt.Sprintf("  W:       %s\n", c.W.Name))
+	sb.WriteString(fmt.Sprintf("  E:       %s\n", c.E.Name))
+	sb.WriteString(fmt.Sprintf("  R:       %s\n", c.R.Name))
+
+	return sb.String()
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/kr/pretty"
 	datadragon "github.com/yycholla/LeagueBuilder/DataDragon"
+	lolbuilder "github.com/yycholla/LeagueBuilder/lolbuilder"
 )
 
 const (
@@ -40,6 +41,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	pretty.Print(ahri)
+	ahriLevelled, err := lolbuilder.CalculateStatsOnLevel(ahri, 18)
+	if err != nil {
+		panic(err)
+	}
+	pretty.Println(ahriLevelled.Stats)
 
 }
